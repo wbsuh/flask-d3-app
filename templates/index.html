@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+path {
+  stroke-linejoin: round;
+}
+
+.land {
+  fill: #49aadd;
+}
+
+.states {
+  fill: none;
+  stroke: #fff;
+}
+.states:hover {
+	fill: #aef7ff;
+}
+
+svg .municipality-label {
+  fill: #fff;
+  font-size: 12px;
+  font-weight: 300;
+  text-anchor: middle;
+  font-family: sans-serif;
+}
+</style>
+<body>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="//d3js.org/queue.v1.min.js"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script>
+
+var width = 960,
+    height = 700;
+
+var projection = d3.geo.mercator()
+    .center([126.9895, 37.5651])
+    .scale(100000)
+    .translate([width/2, height/2]);
+
+var path = d3.geo.path().projection(projection);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var tooltip = d3.select("body").append("div")
+    .attr("class","tooltip")
+    .style("opacity",0)
+    .style("width",600);
+
+queue()
+    .defer(d3.json, "../static/seoul_municipalities_topo.json")
+    .await(ready);
+
+function ready(error, seoul) {
+  if (error) throw error;
+  svg.append("path")
+      .datum(topojson.feature(seoul, seoul.objects.seoul_municipalities_geo))
+      .attr("class", "land")
+      .attr("d", path);
+
+  svg.append("path")
+      .datum(topojson.mesh(seoul, seoul.objects.seoul_municipalities_geo, function(a, b) { return a !== b; }))
+      .attr("class", "states")
+      .attr("d", path);
+
+  var features = topojson.feature(seoul, seoul.objects.seoul_municipalities_geo).features;
+
+  svg.selectAll('text')
+      .data(features)
+      .enter().append("text")
+        .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+        .attr("dy", ".35em")
+        .attr("class", "municipality-label")
+        .text(function(d) { return d.properties.name; });
+
+    svg.selectAll('.states')
+        .data(features)
+        .enter()
+        .append('path')
+        .attr('class','states')
+        .attr('d',path)
+        .on('mouseover',function(d,i){
+            var currentState = this;
+            d3.select(this).style('fill-opacity',0.5);
+      });
+}
+
+</script>
+</body>
+</html>
